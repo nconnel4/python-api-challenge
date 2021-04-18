@@ -1,5 +1,8 @@
 from citipy import citipy
 import numpy as np
+import requests
+import time
+from pprint import pprint
 
 # get API key for Open Weather
 from config.config import weather_api_key
@@ -46,3 +49,52 @@ def generate_city_list():
             print('city_list does not contain enough data. Running again')
 
     return cities_list
+
+
+def get_weather_data(city_list):
+    open_weather_url = 'http://api.openweathermap.org/data/2.5/weather?'
+    param_dict = {
+        'appid': weather_api_key,
+        'units': 'imperial'
+    }
+
+    weather_data = []
+    i = 1
+
+    def query_open_weather_api(city):
+        param_dict['q'] = city
+        response = requests.get(open_weather_url, param_dict).json()
+
+        coord_info = response['coord']
+        temp_info = response['main']
+        cloudiness = response['clouds']['all']
+        wind_speed = response['wind']['speed']
+        country = response['sys']['country']
+        date = response['dt']
+
+        weather_dict = {
+            'City': city,
+            'Lat': coord_info['lat'],
+            'Lng': coord_info['lon'],
+            'Max Temp': temp_info['temp_max'],
+            'Humidity': temp_info['humidity'],
+            'Cloudiness': cloudiness,
+            'Wind Speed': wind_speed,
+            'Country': country,
+            'Date': date
+        }
+
+        return weather_dict
+
+    for city in city_list:
+        city_weather = query_open_weather_api(city)
+        weather_data.append(city_weather)
+        print(i)
+        i+=1
+
+
+    print(weather_data)
+
+
+city_list = generate_city_list()
+get_weather_data(city_list)
