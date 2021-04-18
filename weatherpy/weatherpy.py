@@ -62,32 +62,35 @@ def generate_city_list():
             if city not in cities_list:
                 cities_list.append(city)
 
-        if len(cities_list) < 500:
+        if len(cities_list) < 550:
             print('city_list does not contain enough data. Running again')
 
     return cities_list
 
 
 def get_weather_data(city_list):
-    open_weather_url = 'http://api.openweathermap.org/data/2.5/weather?'
-    param_dict = {
-        'appid': weather_api_key,
-        'units': 'imperial'
-    }
-
     weather_data = []
 
     def query_open_weather_api(city):
-        param_dict['q'] = city
+        open_weather_url = 'http://api.openweathermap.org/data/2.5/weather?'
+        param_dict = {
+            'appid': weather_api_key,
+            'units': 'imperial',
+            'q': 'city'
+        }
+
         response = requests.get(open_weather_url, param_dict)
 
         if response.status_code == 404:
             raise InvalidCityError(city)
-        else if response.status_code == 429:
+        elif response.status_code == 429:
             raise TooManyAPICallsError()
 
         response_json = response.json()
 
+        return response_json
+
+    def process_response(response_json):
         coord_info = response_json['coord']
         temp_info = response_json['main']
         cloudiness = response_json['clouds']['all']
@@ -109,21 +112,28 @@ def get_weather_data(city_list):
 
         return weather_dict
 
+    # instantiate counter
+    i = 0
 
-    for i in range(0, len(city_list)):
-        city = city_list[i]
+    print('Data Retrieval Start')
+    print('_________________________')
+
+    for city in city_list:
         try:
-            city_weather = query_open_weather_api(city)
+            api_response = query_open_weather_api(city)
         except InvalidCityError:
             print('City not found. Skipping...')
             continue
 
+        city_weather = process_response(api_response)
+
+        # increment counter
+        i+=1
+
         print(f'Processing {i} | {city}')
         weather_data.append(city_weather)
 
+    print('_________________________')
+    print('Data Retrieval End')
 
-    print(weather_data)
-
-
-city_list = generate_city_list()
-get_weather_data(city_list)
+    return weather_data
