@@ -1,8 +1,6 @@
 from citipy import citipy
 import numpy as np
 import requests
-import time
-from pprint import pprint
 
 # get API key for Open Weather
 from config.config import weather_api_key
