@@ -25,6 +25,7 @@ class InvalidCityError(Error):
         self.message = f'{city} not found by Open Weather API'
         super().__init__(self.message)
 
+
 class TooManyAPICallsError(Error):
     """Returned if too many requests are made to the API within a minute"""
     pass
@@ -113,11 +114,16 @@ def get_weather_data(city_list):
 
     # instantiate counter
     i = 0
+    set = 0
 
     print('Data Retrieval Start')
     print('_________________________')
 
     for city in city_list:
+        if i % 50 == 0:
+            set += 1
+            i = 0
+
         try:
             api_response = query_open_weather_api(city)
         except InvalidCityError:
@@ -129,7 +135,7 @@ def get_weather_data(city_list):
         # increment counter
         i+=1
 
-        print(f'Processing Record {i} | {city}')
+        print(f'Processing Record {i} of Set {set} | {city}')
         weather_data.append(city_weather)
 
     print('_________________________')
