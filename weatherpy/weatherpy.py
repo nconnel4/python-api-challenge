@@ -8,7 +8,7 @@ from pprint import pprint
 from config.config import weather_api_key
 
 output_folder = '../output_data/'
-_output_data_file = output_folder.join('cities.csv')
+output_data_file = output_folder + 'cities.csv'
 
 lat_range = (-90, 90)
 lng_range = (-180, 180)
@@ -29,6 +29,7 @@ class InvalidCityError(Error):
 
 class TooManyAPICallsError(Error):
     """Returned if too many requests are made to the API within a minute"""
+    pass
 
 
 def get_random_lat_lng():
@@ -53,7 +54,7 @@ def get_nearest_city(coordinate):
 def generate_city_list():
     cities_list = []
 
-    while len(cities_list) < 500:
+    while len(cities_list) < 550:
         coordinate_list = get_random_lat_lng()
 
         for coordinate in coordinate_list:
@@ -76,7 +77,7 @@ def get_weather_data(city_list):
         param_dict = {
             'appid': weather_api_key,
             'units': 'imperial',
-            'q': 'city'
+            'q': city
         }
 
         response = requests.get(open_weather_url, param_dict)
@@ -130,7 +131,7 @@ def get_weather_data(city_list):
         # increment counter
         i+=1
 
-        print(f'Processing {i} | {city}')
+        print(f'Processing Record {i} | {city}')
         weather_data.append(city_weather)
 
     print('_________________________')
