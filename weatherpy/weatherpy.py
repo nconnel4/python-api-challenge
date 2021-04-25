@@ -1,14 +1,35 @@
 from citipy import citipy
 import numpy as np
+import requests
+import time
+from pprint import pprint
 
 # get API key for Open Weather
 from config.config import weather_api_key
 
 output_folder = '../output_data/'
-_output_data_file = output_folder.join('cities.csv')
+output_data_file = output_folder + 'cities.csv'
 
 lat_range = (-90, 90)
 lng_range = (-180, 180)
+
+
+class Error(Exception):
+    """Base class for exceptions"""
+    pass
+
+
+class InvalidCityError(Error):
+    """Returned when Open Weather API returns a 404 error for city"""
+
+    def __init__(self, city, message='City not found in Open Weather API'):
+        self.city = city
+        self.message = f'{city} not found by Open Weather API'
+        super().__init__(self.message)
+
+class TooManyAPICallsError(Error):
+    """Returned if too many requests are made to the API within a minute"""
+    pass
 
 
 def get_random_lat_lng():
@@ -33,7 +54,7 @@ def get_nearest_city(coordinate):
 def generate_city_list():
     cities_list = []
 
-    while len(cities_list) < 500:
+    while len(cities_list) < 550:
         coordinate_list = get_random_lat_lng()
 
         for coordinate in coordinate_list:
@@ -42,7 +63,78 @@ def generate_city_list():
             if city not in cities_list:
                 cities_list.append(city)
 
-        if len(cities_list) < 500:
+        if len(cities_list) < 550:
             print('city_list does not contain enough data. Running again')
 
     return cities_list
+
+
+def get_weather_data(city_list):
+    weather_data = []
+
+    def query_open_weather_api(city):
+        open_weather_url = 'http://api.openweathermap.org/data/2.5/weather?'
+        param_dict = {
+            'appid': weather_api_key,
+            'units': 'imperial',
+            'q': city
+        }
+
+        response = requests.get(open_weather_url, param_dict)
+
+        if response.status_code == 404:
+            raise InvalidCityError(city)
+        elif response.status_code == 429:
+            raise TooManyAPICallsError()
+
+        response_json = response.json()
+
+        return response_json
+
+    def process_response(response_json):
+        coord_info = response_json['coord']
+        temp_info = response_json['main']
+        cloudiness = response_json['clouds']['all']
+        wind_speed = response_json['wind']['speed']
+        country = response_json['sys']['country']
+        date = response_json['dt']
+
+        weather_dict = {
+            'City': city,
+            'Lat': coord_info['lat'],
+            'Lng': coord_info['lon'],
+            'Max Temp': temp_info['temp_max'],
+            'Humidity': temp_info['humidity'],
+            'Cloudiness': cloudiness,
+            'Wind Speed': wind_speed,
+            'Country': country,
+            'Date': date
+        }
+
+        return weather_dict
+
+    # instantiate counter
+    i = 0
+
+    print('Data Retrieval Start')
+    print('_________________________')
+
+    for city in city_list:
+        try:
+            api_response = query_open_weather_api(city)
+        except InvalidCityError:
+            print('City not found. Skipping...')
+            continue
+
+        city_weather = process_response(api_response)
+
+        # increment counter
+        i+=1
+
+        print(f'Processing Record {i} | {city}')
+        weather_data.append(city_weather)
+
+    print('_________________________')
+    print('Data Retrieval End')
+
+    return weather_data
